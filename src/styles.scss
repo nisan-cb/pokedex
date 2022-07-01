@@ -21,11 +21,17 @@ body{
   align-items: center;
   // height: 100%;
   flex-wrap: wrap;
+}
 
+#list{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
 }
 
 .card{
-  width: fit-content;
+  max-width: fit-content;
   height: fit-content;
   box-shadow: 0 0 8px black;
   flex-grow: 1;

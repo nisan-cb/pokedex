@@ -1,15 +1,26 @@
+import { ListManager } from "./listManager";
 import { Page } from "./page";
+import { Pokemon } from "./pokemon";
+
+interface PokeDaya {
+    // TODO : add PokeData keys and types
+}
 
 export class Manager {
     parentEl: HTMLElement
     el: HTMLElement;
+    dataArray = []// data from api or localstorage - only data
     pages: Page[];
     currentPage: number;
+    listManager: ListManager;
+    pokemonsArray: Pokemon[]; // pokemon component  array data & ui
 
 
     constructor(parentEl: HTMLElement) {
         this.parentEl = parentEl;
         this.el = this.createElement();
+        this.pokemonsArray = [];
+        this.listManager = new ListManager(this.el, this.pokemonsArray);
         this.pages = [];
         this.currentPage = -1;
 
@@ -20,8 +31,10 @@ export class Manager {
         await this.loadPageFromApi('');
         // console.log(this.pages)
         this.displayPage(0);
+    }
 
-
+    loadData() {
+        //TODO: function that load data from localstorage if exist or from api
     }
 
     loadPageFromApi(url: string) {
@@ -41,8 +54,6 @@ export class Manager {
                 })
                 .catch(error => reject(error));
         })
-
-
     }
 
     async displayPage(index: number) {
@@ -67,7 +78,7 @@ export class Manager {
         return el;
     }
     render() {
-
+        this.listManager.render();
         this.parentEl.append(this.el);
     }
 }
