@@ -1,94 +1,110 @@
-const gulp = require('gulp');
-const clean = require('gulp-clean');
-const rename = require('gulp-rename');
-const webpack = require('webpack-stream');
-const sass = require('gulp-sass')(require('sass'));
-const browserSync = require('browser-sync').create();
-const { exec } = require('child_process');
+const gulp = require("gulp");
+const clean = require("gulp-clean");
+const sass = require("gulp-sass")(require("sass"));
+const postcss = require("gulp-postcss");
+const cssnano = require("cssnano");
+const ts = require("gulp-typescript");
+const uglify = require("gulp-uglify");
+const browsersync = require("browser-sync").create();
+const webpack = require("gulp-webpack");
+const webpackConfig = require("./webpack.config");
+const server = require("gulp-develop-server");
 
-const webpackConfig = require('./webpack.config.js');
+const tsProjectClient = ts.createProject("./tsconfig.json");
+const tsProjectServer = ts.createProject("./tsconfig.json");
 
-// Removes previous dist
-gulp.task('start', () => {
-  return gulp.src('./dist', { allowEmpty: true })
-    .pipe(clean());
-});
+// clean task
+gulp.task("clean", () => gulp.src("dist", { allowEmpty: true }).pipe(clean()));
 
-// Creates js bundle from several js files
-gulp.task('build', () => {
-  return webpack(webpackConfig)
-    .pipe(gulp.dest('./dist'))
-});
+// Copy Images task
+gulp.task("images", () => gulp.src("src/client/images/*", { allowEmpty: true }).pipe(gulp.dest("dist/client/images")));
 
-// Converts scss to css
-gulp.task('scss', () => {
-  return gulp.src('./src/**/*.scss')
-    .pipe(sass())
-    .pipe(gulp.dest('./dist'));
-});
+// HTML task
+gulp.task("html", () => gulp.src("src/client/*.html").pipe(gulp.dest("dist/client")));
 
-// Transfers index
-gulp.task('index', () => {
-  return gulp.src(['./src/index.html', './src/favicon.ico'])
-    .pipe(gulp.dest('./dist'));
-});
+// Sass task
+gulp.task("sass", () =>
+    gulp
+        .src("src/client/styles/*.scss")
+        .pipe(sass())
+        .pipe(postcss([cssnano()]))  // conver the style to minimum one line
+        .pipe(gulp.dest("dist/client/styles"))
+        .pipe(browsersync.stream())
+);
 
-// Browser Sync
-gulp.task('browser-sync', () => {
-  browserSync.init({
-    browser: 'default',
-    port: 4000,
-    server: { baseDir: './dist' }
-  });
-});
+// Typescript Client task
+gulp.task("ts-client", () => gulp.src("src/client/scripts/*.ts").pipe(tsProjectClient()).pipe(gulp.dest("dist/client/js")));
 
-// Browser Sync live reload
-gulp.task('browser-sync-watch', () => {
-  gulp.watch('./dist/styles.css').on('change', browserSync.reload);
-  gulp.watch('./dist/app.js').on('change', browserSync.reload);
-  gulp.watch('./dist/index.html').on('change', browserSync.reload);
-});
+// Webpack task
+gulp.task("webpack", () => webpack(webpackConfig).pipe(uglify()).pipe(gulp.dest("dist/client")));
 
-// Watch scss files
-gulp.task('watch-scss', () => {
-  return gulp.watch('./src/**/*.scss', gulp.series('scss'));
-});
+// Clean js folder
+gulp.task("clean-js", () => gulp.src("dist/client/js", { allowEmpty: true }).pipe(clean()));
 
-// Watch html files
-gulp.task('watch-html', () => {
-  return gulp.watch('./src/index.html', gulp.series('index'));
-});
+// Build ts-client task
+gulp.task("build-ts-client", gulp.series("ts-client", "webpack", "clean-js"));
 
-// Watch tsc files
-gulp.task('watch-tsc', () => {
-  return gulp.watch('./dist/tsc/**/*.js', gulp.series('build'));
-});
+// Typescript Server task
+gulp.task("ts-server", () => gulp.src("src/server/*.ts").pipe(tsProjectServer()).pipe(gulp.dest("dist/server")));
 
-// Initial ts compile
-gulp.task('tsc', cb => {
-  exec('tsc', (err, msg) => {
+// Start Server task
+gulp.task("server-start", (cb) => {
+    server.listen({ path: "dist/server/server.js" });
     cb();
-  });
 });
 
-// Watch ts files and recompile
-gulp.task('tsc-w', () => {
-  exec('tsc -w');
+// Restart Server task
+gulp.task("server-restart", (cb) => {
+    server.restart();
+    setTimeout(() => cb(), 2500);
 });
 
-// Run all together
-gulp.task('default', gulp.series(
-  'start',
-  'scss',
-  'index',
-  'tsc',
-  'build',
-  gulp.parallel(
-    'browser-sync',
-    'browser-sync-watch',
-    'watch-scss',
-    'watch-html',
-    'watch-tsc',
-    'tsc-w',
-  ),
-));
+// Browser sync tasks
+gulp.task("browsersyncServe", (cb) => {
+    browsersync.init({
+        proxy: { target: "http://localhost:3000" },
+        port: 5500,
+    });
+    cb();
+});
+
+gulp.task("browsersyncReload", (cb) => {
+    browsersync.reload();
+    cb();
+});
+
+// Watch task
+gulp.task("watch", () => {
+    gulp.watch("src/client/images", gulp.series("images", "browsersyncReload"));
+    gulp.watch("src/client/*.html", gulp.series("html", "browsersyncReload"));
+    gulp.watch("src/client/styles/*.scss", gulp.series("sass"));
+    gulp.watch("src/client/scripts/*.ts", gulp.series("build-ts-client", "browsersyncReload"));
+    gulp.watch("src/server", gulp.series("ts-server"));
+    gulp.watch("dist/server/server.js", gulp.series("server-restart", "browsersyncReload"));
+});
+
+// Default task
+gulp.task("default", gulp.series("clean", "images", "ts-server", "build-ts-client", "server-start", "sass", "html", "browsersyncServe", "watch"));
+
+// Heroku clean files
+gulp.task("heroku-clean", () => {
+    return gulp.src(["deploy/package.json", "deploy/package-lock.json", "deploy/dist", "deploy/data"], { allowEmpty: true }).pipe(clean());
+});
+
+// Heroku copy root
+gulp.task("heroku-copy-root", () => {
+    return gulp.src(["./package.json", "./package-lock.json"]).pipe(gulp.dest("deploy"));
+});
+
+// Heroku copy dist
+gulp.task("heroku-copy-dist", () => {
+    return gulp.src("dist/**/*").pipe(gulp.dest("deploy/dist"));
+});
+
+// Heroku copy data
+gulp.task("heroku-copy-data", () => {
+    return gulp.src("data/*").pipe(gulp.dest("deploy/data"));
+});
+
+// Deploy
+gulp.task("deploy", gulp.series("heroku-clean", "heroku-copy-root", "heroku-copy-dist", "heroku-copy-data"));
