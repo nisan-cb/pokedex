@@ -48,6 +48,20 @@ class MongoManager {
             });
         });
     }
+    findOne(id) {
+        return new Promise((resolve, reject) => {
+            this.PokemonModel.findOne({ 'id': id })
+                .then(result => resolve(result))
+                .catch(err => reject(err));
+        });
+    }
+    getPage(pageNumber) {
+        return new Promise((resolve, reject) => {
+            this.PokemonModel.find().skip((pageNumber - 1) * 20).limit(20).sort('id')
+                .then(result => resolve(result))
+                .catch(err => reject(err));
+        });
+    }
 }
 exports.default = MongoManager;
 // const db = new MongoManager();
