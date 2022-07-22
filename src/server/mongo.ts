@@ -2,7 +2,8 @@ import { Model, Models } from 'mongoose';
 import { resolve } from 'path';
 import { isElementAccessExpression } from 'typescript';
 import { PokeData, PokeData as PokeDataInterface } from './interfaces'
-
+import dotenv from 'dotenv'
+dotenv.config()
 export default class MongoManager {
     mongoose: any;
     connectionString: string;
@@ -11,7 +12,7 @@ export default class MongoManager {
 
     constructor() {
         this.mongoose = require('mongoose');
-        this.connectionString = 'mongodb+srv://nisan:1234@cluster1.xvhsvov.mongodb.net/?retryWrites=true&w=majority';
+        this.connectionString = process.env.MONGO_CONNECTION_STRING;
         this.connectionParams = {
             useNewUrlParser: true,
             useUnifiedTopology: true
@@ -62,7 +63,11 @@ export default class MongoManager {
 
 
 // const db = new MongoManager();
-// db.connect();
+// console.log(process.env.MONGO_CONNECTION_STRING)
+// console.log(process.env.PORT)
+// db.connect()
+//     .then(result => console.log(result))
+//     .catch(err => console.log(err));
 // console.log(PokeDataInterface);
 // db.addSingalePOkemon({
 //     id: 1,

@@ -1,9 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 class MongoManager {
     constructor() {
         this.mongoose = require('mongoose');
-        this.connectionString = 'mongodb+srv://nisan:1234@cluster1.xvhsvov.mongodb.net/?retryWrites=true&w=majority';
+        this.connectionString = process.env.MONGO_CONNECTION_STRING;
         this.connectionParams = {
             useNewUrlParser: true,
             useUnifiedTopology: true
@@ -46,7 +51,11 @@ class MongoManager {
 }
 exports.default = MongoManager;
 // const db = new MongoManager();
-// db.connect();
+// console.log(process.env.MONGO_CONNECTION_STRING)
+// console.log(process.env.PORT)
+// db.connect()
+//     .then(result => console.log(result))
+//     .catch(err => console.log(err));
 // console.log(PokeDataInterface);
 // db.addSingalePOkemon({
 //     id: 1,
